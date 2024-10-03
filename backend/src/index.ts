@@ -8,6 +8,7 @@ import bcrypt from 'bcrypt';
 const app = new Hono();
 const prisma = new PrismaClient();
 const bcrypt = require("bcrypt");
+const { Pool } = require('pg');
 
 app.use('*', cors({
   origin: 'http://localhost:3000', 
@@ -142,11 +143,60 @@ app.post('/login', async (c) => {
   return c.json({ message: 'Login successful', user: { username: user.username, role: user.role.name } });
 });
 
-app.get('/dzongkhag', (c) => {
-  return c.json({
-    dzongkhag: "Thimphu"
-  })
-})
+//postgresSQL connection
+const pool = new Pool({
+  user: 'tshering',
+  host: 'localhost',
+  database: 'parking_db',
+  password: 'software@321',
+  port: 5432,
+});
+
+// dzongkhag endpoint
+app.get("/dzongkhags", async (c) => {
+  try {
+    const result = await pool.query("SELECT * FROM Dzongkhag");
+    return c.json(result.rows); // Correct way to return JSON in Hono
+  } catch (error) {
+    console.error("Error fetching dzongkhag data:", error);
+    return c.json({ error: "Failed to fetch dzongkhag data" }, 500); // Use c.json and pass the status code correctly
+  }
+});
+
+// parking_area endpoint
+app.get("/parking_areas", async (c) => {
+  try {
+    const result = await pool.query("SELECT * FROM parking_area");
+    return c.json(result.rows); // Correct way to return JSON in Hono
+  } catch (error) {
+    console.error("Error fetching parking area data:", error);
+    return c.json({ error: "Failed to fetch parking area data" }, 500); // Use c.json and pass the status code correctly
+  }
+});
+
+// parking _detail endpoint
+app.get("/parking_details", async (c) => {
+  try {
+    const result = await pool.query("SELECT * FROM parking_detail");
+    return c.json(result.rows); // Correct way to return JSON in Hono
+  } catch (error) {
+    console.error("Error fetching parking detail data:", error);
+    return c.json({ error: "Failed to fetch parking detail data" }, 500); // Use c.json and pass the status code correctly
+  }
+});
+
+// parking _slots endpoint
+app.get("/parking_slots", async (c) => {
+  try {
+    const result = await pool.query("SELECT * FROM parking_slots");
+    return c.json(result.rows); // Correct way to return JSON in Hono
+  } catch (error) {
+    console.error("Error fetching parking slot data:", error);
+    return c.json({ error: "Failed to fetch parking slot data" }, 500); // Use c.json and pass the status code correctly
+  }
+});
+
+
 
 const port = 9999;
 console.log(`Server is running on port ${port}`);
