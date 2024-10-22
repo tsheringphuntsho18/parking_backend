@@ -7,8 +7,9 @@ import jwt from "jsonwebtoken"
 
 const app = new Hono();
 const prisma = new PrismaClient();
-const bcrypt = require("bcrypt");
 const { Pool } = require('pg');
+const bodyParser = require("body-parser");
+
 
 app.use('*', cors({
   origin: 'http://localhost:3000', 
@@ -233,6 +234,19 @@ app.get("/parking_slots", async (c) => {
   } catch (error) {
     console.error("Error fetching parking slot data:", error);
     return c.json({ error: "Failed to fetch parking slot data" }, 500); // Use c.json and pass the status code correctly
+  }
+});
+
+// API endpoint to add data to the database
+app.post("/add_data", async (c) => {
+  const { parkingarea_id, parking_location, dzongkhag_id } = await c.req.json();
+
+  try {
+    const result = await pool.query("INSERT INTO parking_area (parkingarea_id, parking_location, dzongkhag_id) VALUES ($1, $2, $3)", [parkingarea_id, parking_location, dzongkhag_id]);
+    return c.json({ message: "Data added successfully" }, 201);
+  } catch (error) {
+    console.error("Error adding data to the database:", error);
+    return c.json({ error: "Failed to add data to the database" }, 500);
   }
 });
 
