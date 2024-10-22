@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
-// import jwt from '';
+import jwt from "jsonwebtoken"
 
 const app = new Hono();
 const prisma = new PrismaClient();
@@ -15,6 +15,9 @@ app.use('*', cors({
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'], 
   allowHeaders: ['Content-Type', 'Authorization'], 
 }));
+
+const SECRET_KEY = "436342d6a740aefc3516492690a891f0f8b9ad0c8b93592192b3235ed4d4337310e2ae96e72c2f32210988eebf67cfad46a8ac1d59a213ba5a8607a11f666389""
+
 
 // root endpoint
 app.get('/', (c) => {
@@ -115,6 +118,43 @@ app.post('/signup', async (c) => {
     return c.json({ message: 'Error creating user', error: error.message }, 500);
   }
 });
+
+app.get('/user', async (c) => {
+  // Use `c.req.header` to get headers in Hono
+  const token = c.req.header('cookie')?.split('token=')[1] || c.req.header('Authorization')?.split(' ')[1];
+
+  if (!token) {
+    return c.json({ message: 'Unauthorized' }, 401);
+  }
+
+  try {
+    // Verify the JWT token
+    const decoded = jwt.verify(token, SECRET_KEY);
+
+    // Extract user ID from token payload
+    const userId = decoded.userId;
+
+    // Fetch the user from the database
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { role: true },
+    });
+
+    if (!user) {
+      return c.json({ message: 'User not found' }, 404);
+    }
+
+    // Return user details (excluding password)
+    return c.json({
+      id: user.id,
+      username: user.username,
+      role: user.role.name,
+    });
+  } catch (err) {
+    return c.json({ message: 'Invalid or expired token' }, 401);
+  }
+});
+
 
 // Login endpoint
 app.post('/login', async (c) => {

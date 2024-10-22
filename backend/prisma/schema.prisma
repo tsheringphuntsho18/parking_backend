@@ -1,24 +1,24 @@
-datasource db {
-  provider = "postgres"
-  url      = env("DATABASE_URL") 
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
 model Role {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique @db.VarChar(10)
+  id          Int     @id @default(autoincrement())
+  name        String  @unique @db.VarChar(10)
   description String?
   users       user[]
 }
 
 model user {
-  id         Int     @id @default(autoincrement())
-  username   String  @unique @db.VarChar(25)
-  password   String  @db.VarChar(200)
-  hint       String?  @db.VarChar(100)
-  roleId     Int?
-  role       Role?     @relation(fields: [roleId], references: [id])
+  id       Int     @id @default(autoincrement())
+  username String  @unique @db.VarChar(25)
+  password String  @db.VarChar(200)
+  hint     String? @db.VarChar(100)
+  roleId   Int?
+  role     Role?   @relation(fields: [roleId], references: [id])
 }
