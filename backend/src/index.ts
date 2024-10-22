@@ -14,10 +14,11 @@ const bodyParser = require("body-parser");
 app.use('*', cors({
   origin: 'http://localhost:3000', 
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'], 
-  allowHeaders: ['Content-Type', 'Authorization'], 
+  allowHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, 
 }));
 
-const SECRET_KEY = "436342d6a740aefc3516492690a891f0f8b9ad0c8b93592192b3235ed4d4337310e2ae96e72c2f32210988eebf67cfad46a8ac1d59a213ba5a8607a11f666389""
+const SECRET_KEY = "436342d6a740aefc3516492690a891f0f8b9ad0c8b93592192b3235ed4d4337310e2ae96e72c2f32210988eebf67cfad46a8ac1d59a213ba5a8607a11f666389"
 
 
 // root endpoint
@@ -158,6 +159,32 @@ app.get('/user', async (c) => {
 
 
 // Login endpoint
+// app.post('/login', async (c) => {
+//   const { username, password } = await c.req.json();
+
+//   // Find the user by username
+//   const user = await prisma.user.findUnique({
+//     where: { username },
+//     include: { role: true },  // Include role for later role-based checks
+//   });
+
+//   if (!user) {
+//     return c.json({ message: 'Invalid username or password' }, 400);
+//   }
+
+//   // Verify password
+//   const validPassword = await bcrypt.compare(password, user.password);
+
+//   if (!validPassword) {
+//     return c.json({ message: 'Invalid username or password' }, 400);
+//   }
+
+//   // Set a cookie with the user's ID (or some unique identifier)
+//   c.header('Set-Cookie', `userId=${user.id}; HttpOnly; Path=/`);
+
+//   return c.json({ message: 'Login successful', user: { username: user.username, role: user.role.name } });
+// });
+
 app.post('/login', async (c) => {
   const { username, password } = await c.req.json();
 
@@ -178,10 +205,17 @@ app.post('/login', async (c) => {
     return c.json({ message: 'Invalid username or password' }, 400);
   }
 
-  // Set a cookie with the user's ID (or some unique identifier)
-  c.header('Set-Cookie', `userId=${user.id}; HttpOnly; Path=/`);
+  // Create a JWT token
+  const token = jwt.sign(
+    { userId: user.id, role: user.role.name }, // Payload: user ID and role
+    SECRET_KEY,  // Secret key to sign the token
+    { expiresIn: '1h' }  // Token expires in 1 hour
+  );
 
-  return c.json({ message: 'Login successful', user: { username: user.username, role: user.role.name } });
+  // Set the JWT token as a cookie or return it in the response
+  c.header('Set-Cookie', `token=${token}; HttpOnly; Path=/`);
+
+  return c.json({ message: 'Login successful', token, role: user.role.name, }); // Optionally include the token in the response body
 });
 
 //postgresSQL connection
