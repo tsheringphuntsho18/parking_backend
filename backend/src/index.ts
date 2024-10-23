@@ -210,6 +210,9 @@ app.post("/add_data", async (c) => {
   }
 });
 
+// start and stop the python script
+
+
 
 
 const port = 9999;
