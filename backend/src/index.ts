@@ -2,8 +2,8 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
-import jwt from "jsonwebtoken"
+const bcrypt = require('bcrypt');
+const jwt = require("jsonwebtoken")
 
 const app = new Hono();
 const prisma = new PrismaClient();
@@ -11,11 +11,18 @@ const { Pool } = require('pg');
 const bodyParser = require("body-parser");
 
 
+// app.use('*', cors({
+//   origin: 'http://localhost:3000', 
+//   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'], 
+//   allowHeaders: ['Content-Type', 'Authorization'],
+//   credentials: true, 
+// }));
+
 app.use('*', cors({
-  origin: 'http://localhost:3000', 
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE'], 
-  allowHeaders: ['Content-Type', 'Authorization'],
-  credentials: true, 
+  origin: 'http://localhost:3000', // Allow frontend to access the backend
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed methods
+  allowHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+  credentials: true, // Allow credentials (cookies, etc.)
 }));
 
 const SECRET_KEY = "436342d6a740aefc3516492690a891f0f8b9ad0c8b93592192b3235ed4d4337310e2ae96e72c2f32210988eebf67cfad46a8ac1d59a213ba5a8607a11f666389"
@@ -55,7 +62,12 @@ app.post('/roles', async (c) => {
 
     return c.json({ message: 'Role created successfully', role: newRole }, 201);
   } catch (error) {
-    return c.json({ message: 'Error creating role', error: error.message }, 500);
+      if (error instanceof Error){
+        return c.json({ message: 'Error creating role', error: error.message}, 500);
+      } else {
+        console.error("Unexpected error:", error);
+        return c.json({ message: 'Unexpected error occured'}, 500);
+      }
   }
 });
 
@@ -116,10 +128,14 @@ app.post('/signup', async (c) => {
 
     return c.json({ message: 'User created successfully', user: newUser }, 201);
   } catch (error) {
-    console.error('Error details:', error);
-    return c.json({ message: 'Error creating user', error: error.message }, 500);
-  }
-});
+    if (error instanceof Error){
+      return c.json({ message: 'Error creating role', error: error.message}, 500);
+    } else {
+      console.error("Unexpected error:", error);
+      return c.json({ message: 'Unexpected error occured'}, 500);
+    }
+}});
+
 
 app.get('/user', async (c) => {
   // Use `c.req.header` to get headers in Hono
@@ -150,7 +166,7 @@ app.get('/user', async (c) => {
     return c.json({
       id: user.id,
       username: user.username,
-      role: user.role.name,
+      role: user.role?.name,
     });
   } catch (err) {
     return c.json({ message: 'Invalid or expired token' }, 401);
@@ -195,7 +211,7 @@ app.post('/login', async (c) => {
   });
 
   if (!user) {
-    return c.json({ message: 'Invalid username or password' }, 400);
+    return c.json({ message: 'not user' }, 400);
   }
 
   // Verify password
@@ -207,7 +223,7 @@ app.post('/login', async (c) => {
 
   // Create a JWT token
   const token = jwt.sign(
-    { userId: user.id, role: user.role.name }, // Payload: user ID and role
+    { userId: user.id, role: user.role?.name }, // Payload: user ID and role
     SECRET_KEY,  // Secret key to sign the token
     { expiresIn: '1h' }  // Token expires in 1 hour
   );
@@ -215,8 +231,65 @@ app.post('/login', async (c) => {
   // Set the JWT token as a cookie or return it in the response
   c.header('Set-Cookie', `token=${token}; HttpOnly; Path=/`);
 
-  return c.json({ message: 'Login successful', token, role: user.role.name, }); // Optionally include the token in the response body
+  return c.json({ message: 'Login successful', token, role: user.role?.name, }); // Optionally include the token in the response body
 });
+
+app.get('/validate-token', (req, res) => {
+  const token = req.cookies.token; // Retrieve token from cookies
+
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Validate the token
+    return res.status(200).json({ user: decoded });
+  } catch (error) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+});
+
+app.get('/users', async (ctx) => {
+  try {
+    // Fetch all users and their roles
+    const users = await prisma.user.findMany({
+      include: {
+        role: true, // Assuming role is a related model
+      },
+    });
+
+    // Map the response to include only the required fields
+    const userData = users.map((user) => ({
+      id: user.id,
+      name: user.username,
+      role: user.role // Assuming role name is in role.name
+    }));
+
+    return ctx.json(userData);
+  } catch (error) {
+    console.error(error);
+    return ctx.json({ error: 'Failed to fetch users' }, 500);
+  }
+});
+
+
+// Middleware to verify JWT tokens
+// app.use('/protected/*', async (c, next) => {
+//   const authHeader = c.req.headers.get('authorization');
+//   const token = authHeader?.split(' ')[1];
+
+//   if (!token) {
+//     return c.json({ message: 'Access denied. No token provided.' }, 401);
+//   }
+
+//   try {
+//     const decoded = jwt.verify(token, SECRET_KEY);
+//     c.req['user'] = decoded; // Attach user info to the request
+//     await next();
+//   } catch {
+//     return c.json({ message: 'Invalid token.' }, 401);
+//   }
+// });
 
 //postgresSQL connection
 const pool = new Pool({
@@ -293,3 +366,7 @@ serve({
   fetch: app.fetch,
   port,
 });
+
+
+
+
