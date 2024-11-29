@@ -1,6 +1,7 @@
 {
   "name": "backend",
   "scripts": {
+  
     "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
