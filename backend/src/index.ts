@@ -19,7 +19,7 @@ const bodyParser = require("body-parser");
 // }));
 
 app.use('*', cors({
-  origin: 'http://localhost:3000', // Allow frontend to access the backend
+  origin: 'http://localhost:8081', // Allow frontend to access the backend
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed methods
   allowHeaders: ['Content-Type', 'Authorization'], // Allowed headers
   credentials: true, // Allow credentials (cookies, etc.)
