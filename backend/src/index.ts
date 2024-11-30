@@ -19,11 +19,16 @@ const bodyParser = require("body-parser");
 // }));
 
 app.use('*', cors({
-  origin: 'http://localhost:8081', // Allow frontend to access the backend
+  origin: 'http://localhost:3000', // Allow frontend to access the backend
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed methods
   allowHeaders: ['Content-Type', 'Authorization'], // Allowed headers
   credentials: true, // Allow credentials (cookies, etc.)
 }));
+
+app.options('*', (c) => {
+  return c.json({});
+});
+
 
 const SECRET_KEY = "436342d6a740aefc3516492690a891f0f8b9ad0c8b93592192b3235ed4d4337310e2ae96e72c2f32210988eebf67cfad46a8ac1d59a213ba5a8607a11f666389"
 
@@ -293,10 +298,10 @@ app.get('/users', async (ctx) => {
 
 //postgresSQL connection
 const pool = new Pool({
-  user: 'tshering',
+  user: 'sonam_dorji',
   host: 'localhost',
-  database: 'parking_db',
-  password: 'software@321',
+  database: 'parking_user',
+  password: '17963001',
   port: 5432,
 });
 
