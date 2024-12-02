@@ -19,7 +19,7 @@ const bodyParser = require("body-parser");
 // }));
 
 app.use('*', cors({
-  origin: 'http://localhost:3000', // Allow frontend to access the backend
+  origin: 'http://localhost:3001', // Allow frontend to access the backend
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed methods
   allowHeaders: ['Content-Type', 'Authorization'], // Allowed headers
   credentials: true, // Allow credentials (cookies, etc.)
@@ -73,6 +73,37 @@ app.post('/roles', async (c) => {
         console.error("Unexpected error:", error);
         return c.json({ message: 'Unexpected error occured'}, 500);
       }
+  }
+});
+
+// this endpoint is to create user
+app.post('/user', async (c) => {
+  const { username, password, roleName, roleDescription } = await c.req.json();
+
+  // Simple validation to ensure necessary fields are present
+  if (!username || !password || !roleName) {
+    return c.json({ message: 'Missing required fields' }, 400);
+  }
+
+  try {
+    // Hash password before saving it
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create a new user and assign the role
+    const newUser = await prisma.user.create({
+      data: {
+        username,
+        password: hashedPassword,
+        role: {
+          connect: { name: roleName }, // Assuming role exists
+        },
+      },
+    });
+
+    return c.json(newUser, 201); // Respond with the created user
+  } catch (err) {
+    console.error('Error creating user:', err);
+    return c.json({ message: 'Failed to create user' }, 500);
   }
 });
 
@@ -277,6 +308,32 @@ app.get('/users', async (ctx) => {
   }
 });
 
+app.delete('/users/:id', async (c) => {
+  const userId = parseInt(c.req.param('id'), 10);
+
+  if (isNaN(userId)) {
+    return c.json({ error: 'Invalid user ID' }, 400);
+  }
+
+  try {
+    const user = await prisma.user.delete({
+      where: {
+        id: userId,
+      },
+    });
+
+    return c.json({ message: 'User deleted successfully', user });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+
+    if (error.code === 'P2025') { // Prisma-specific error for "Record not found"
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    return c.json({ error: 'Failed to delete user' }, 500);
+  }
+});
+
 
 // Middleware to verify JWT tokens
 // app.use('/protected/*', async (c, next) => {
@@ -298,10 +355,10 @@ app.get('/users', async (ctx) => {
 
 //postgresSQL connection
 const pool = new Pool({
-  user: 'sonam_dorji',
+  user: 'khem',
   host: 'localhost',
-  database: 'parking_user',
-  password: '17963001',
+  database: 'parking_db',
+  password: '17554931@Krg',
   port: 5432,
 });
 
